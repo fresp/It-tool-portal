@@ -1,0 +1,17 @@
+.agent_context/
+.codegraph
+.codegraph/
+.multica/
+.omo/
+.opencode/
+AGENTS.md
+dist/
+bin/
+tmp/
+.env
+node_modules/
+apps/web/dist/
+apps/web/tsconfig.tsbuildinfo
+internal/handlers/web/dist/assets/
+coverage/
+*.log

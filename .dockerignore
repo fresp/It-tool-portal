@@ -1,0 +1,14 @@
+.git
+.agent_context
+.codegraph
+.multica
+.omo
+.opencode
+node_modules
+apps/web/node_modules
+apps/web/dist
+internal/handlers/web/dist/assets
+bin
+tmp
+.env
+*.log
