@@ -10,6 +10,7 @@ import (
 	"github.com/fresp/it-tools-portal/internal/handlers"
 	"github.com/fresp/it-tools-portal/internal/middleware"
 	"github.com/fresp/it-tools-portal/internal/repositories"
+	"github.com/fresp/it-tools-portal/internal/services"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -43,8 +44,9 @@ func main() {
 	}()
 
 	toolRepository := repositories.NewMongoToolRepository(client.Database(databaseName).Collection("tools"))
-	if err := toolRepository.EnsureIndexes(ctx); err != nil {
-		slog.Error("ensure tool indexes", "error", err)
+	auditRepository := repositories.NewMongoAuditRepository(client.Database(databaseName).Collection("audit_logs"))
+	if err := auditRepository.EnsureIndexes(ctx); err != nil {
+		slog.Error("ensure audit indexes", "error", err)
 		os.Exit(1)
 	}
 
@@ -69,9 +71,18 @@ func main() {
 		}
 	}
 
+	// Initialize token signer.
+	tokenSigner, err := services.NewTokenSigner()
+	if err != nil {
+		slog.Error("init token signer", "error", err)
+		os.Exit(1)
+	}
+
 	router := handlers.NewRouter(handlers.RouterOptions{
-		ToolStore:  toolRepository,
-		AuthConfig: authConfig,
+		ToolStore:   toolRepository,
+		AuditStore:  auditRepository,
+		TokenSigner: tokenSigner,
+		AuthConfig:  authConfig,
 	})
 	if err := router.Run(":" + port); err != nil {
 		slog.Error("server stopped", "error", err)

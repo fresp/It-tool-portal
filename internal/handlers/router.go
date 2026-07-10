@@ -7,11 +7,14 @@ import (
 	"strings"
 
 	"github.com/fresp/it-tools-portal/internal/middleware"
+	"github.com/fresp/it-tools-portal/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
 type RouterOptions struct {
 	ToolStore  ToolStore
+	AuditStore AuditStore
+	TokenSigner *services.TokenSigner
 	AuthConfig *middleware.AuthConfig
 }
 
@@ -38,6 +41,14 @@ func NewRouter(options ...RouterOptions) *gin.Engine {
 	// Protected API routes.
 	if routerOptions.ToolStore != nil {
 		registerToolRoutes(router, routerOptions.ToolStore, routerOptions.AuthConfig)
+	}
+
+	// Token exchange and JWKS routes.
+	if routerOptions.TokenSigner != nil {
+		registerJWKSRoute(router, routerOptions.TokenSigner)
+	}
+	if routerOptions.ToolStore != nil && routerOptions.AuditStore != nil && routerOptions.TokenSigner != nil {
+		registerExchangeRoutes(router, routerOptions.ToolStore, routerOptions.AuditStore, routerOptions.TokenSigner, routerOptions.AuthConfig)
 	}
 	router.GET("/assets/*filepath", frontendAsset)
 	router.NoRoute(frontendFallback)
