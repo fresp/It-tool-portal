@@ -19,7 +19,7 @@ import (
 func TestToolsAdminRoutesRejectUnauthenticatedCallers(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	store := newFakeToolStore()
-	router := NewRouter(RouterOptions{ToolStore: store, AdminToken: "secret"})
+	router := NewRouter(RouterOptions{ToolStore: store})
 
 	requestBody := `{"name":"Docs","base_url":"https://docs.example.com","icon_url":"https://docs.example.com/icon.svg","allowed_groups":["dev"]}`
 	tests := []struct {
@@ -55,7 +55,7 @@ func TestToolsAdminRoutesRejectUnauthenticatedCallers(t *testing.T) {
 func TestToolCRUDLifecycle(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	store := newFakeToolStore()
-	router := NewRouter(RouterOptions{ToolStore: store, AdminToken: "secret"})
+	router := NewRouter(RouterOptions{ToolStore: store})
 
 	createBody := `{"name":"Docs","base_url":"https://docs.example.com","icon_url":"https://docs.example.com/icon.svg","allowed_groups":["dev"]}`
 	createRecorder := serveJSON(t, router, http.MethodPost, "/api/admin/tools", createBody, "secret")
@@ -106,7 +106,7 @@ func TestListAvailableToolsFiltersByCallerGroupsAndActiveFlag(t *testing.T) {
 	_, _ = store.Create(context.Background(), models.CreateToolRequest{Name: "Finance", BaseURL: "https://finance.example.com", IconURL: "https://finance.example.com/icon.svg", AllowedGroups: []string{"finance"}})
 	inactive := false
 	_, _ = store.Create(context.Background(), models.CreateToolRequest{Name: "Inactive", BaseURL: "https://inactive.example.com", IconURL: "https://inactive.example.com/icon.svg", AllowedGroups: []string{"dev"}, IsActive: &inactive})
-	router := NewRouter(RouterOptions{ToolStore: store, AdminToken: "secret"})
+	router := NewRouter(RouterOptions{ToolStore: store})
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/api/tools", nil)
@@ -125,7 +125,7 @@ func TestListAvailableToolsFiltersByCallerGroupsAndActiveFlag(t *testing.T) {
 func TestToolValidationRejectsInvalidInput(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	store := newFakeToolStore()
-	router := NewRouter(RouterOptions{ToolStore: store, AdminToken: "secret"})
+	router := NewRouter(RouterOptions{ToolStore: store})
 
 	tests := []struct {
 		name string

@@ -3,14 +3,16 @@ package handlers
 import (
 	"io/fs"
 	"net/http"
+	"os"
 	"strings"
 
+	"github.com/fresp/it-tools-portal/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 type RouterOptions struct {
 	ToolStore  ToolStore
-	AdminToken string
+	AuthConfig *middleware.AuthConfig
 }
 
 func NewRouter(options ...RouterOptions) *gin.Engine {
@@ -22,10 +24,20 @@ func NewRouter(options ...RouterOptions) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
 
+	// CSP frame-ancestors for embeddability.
+	router.Use(frameAncestorsMiddleware())
+
 	router.GET("/healthz", health)
 	router.GET("/api/health", health)
+
+	// Auth routes (OIDC login/callback/logout).
+	if routerOptions.AuthConfig != nil {
+		registerAuthRoutes(router, *routerOptions.AuthConfig)
+	}
+
+	// Protected API routes.
 	if routerOptions.ToolStore != nil {
-		registerToolRoutes(router, routerOptions.ToolStore, routerOptions.AdminToken)
+		registerToolRoutes(router, routerOptions.ToolStore, routerOptions.AuthConfig)
 	}
 	router.GET("/assets/*filepath", frontendAsset)
 	router.NoRoute(frontendFallback)
@@ -75,4 +87,15 @@ func contentTypeFor(path string) string {
 		return "text/javascript; charset=utf-8"
 	}
 	return "application/octet-stream"
+}
+
+func frameAncestorsMiddleware() gin.HandlerFunc {
+	ancestors := os.Getenv("FRAME_ANCESTORS")
+	if ancestors == "" {
+		return func(c *gin.Context) { c.Next() }
+	}
+	return func(c *gin.Context) {
+		c.Header("Content-Security-Policy", "frame-ancestors "+ancestors)
+		c.Next()
+	}
 }

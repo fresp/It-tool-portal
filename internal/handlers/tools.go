@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 
+	"github.com/fresp/it-tools-portal/internal/middleware"
 	"github.com/fresp/it-tools-portal/internal/models"
 	"github.com/fresp/it-tools-portal/internal/repositories"
 	"github.com/gin-gonic/gin"
@@ -24,12 +26,23 @@ type toolHandlers struct {
 	store ToolStore
 }
 
-func registerToolRoutes(router *gin.Engine, store ToolStore, adminToken string) {
+func registerToolRoutes(router *gin.Engine, store ToolStore, authConfig *middleware.AuthConfig) {
 	handlers := toolHandlers{store: store}
-	router.GET("/api/tools", handlers.listAvailable)
 
+	// Public: available tools for the authenticated user.
+	public := router.Group("/api/tools")
+	if authConfig != nil {
+		public.Use(middleware.RequireAuth(*authConfig))
+	}
+	public.GET("", handlers.listAvailable)
+
+	// Admin: CRUD endpoints.
 	admin := router.Group("/api/admin/tools")
-	admin.Use(placeholderAdminAuth(adminToken))
+	if authConfig != nil {
+		admin.Use(middleware.RequireAuth(*authConfig), middleware.RequireAdmin())
+	} else {
+		admin.Use(placeholderAdminAuth(os.Getenv("ADMIN_TOKEN")))
+	}
 	admin.POST("", handlers.create)
 	admin.GET("", handlers.list)
 	admin.GET("/:id", handlers.get)
@@ -61,7 +74,13 @@ func (h toolHandlers) list(c *gin.Context) {
 }
 
 func (h toolHandlers) listAvailable(c *gin.Context) {
-	tools, err := h.store.ListAvailable(c.Request.Context(), groupsFromHeader(c.GetHeader("X-User-Groups")))
+	var groups []string
+	if claims, ok := middleware.GetSessionClaims(c); ok {
+		groups = claims.Groups
+	} else {
+		groups = groupsFromHeader(c.GetHeader("X-User-Groups"))
+	}
+	tools, err := h.store.ListAvailable(c.Request.Context(), groups)
 	if err != nil {
 		writeToolError(c, err)
 		return
