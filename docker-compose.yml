@@ -1,0 +1,37 @@
+services:
+  app:
+    build:
+      context: .
+    image: it-tools-portal:local
+    env_file:
+      - .env.example
+    environment:
+      PORT: "8080"
+      MONGODB_URI: mongodb://mongodb:27017
+    ports:
+      - "${APP_HOST_PORT:-8080}:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  mongodb_data:
