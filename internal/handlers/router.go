@@ -8,12 +8,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter() *gin.Engine {
+type RouterOptions struct {
+	ToolStore  ToolStore
+	AdminToken string
+}
+
+func NewRouter(options ...RouterOptions) *gin.Engine {
+	routerOptions := RouterOptions{}
+	if len(options) > 0 {
+		routerOptions = options[0]
+	}
+
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
 
 	router.GET("/healthz", health)
 	router.GET("/api/health", health)
+	if routerOptions.ToolStore != nil {
+		registerToolRoutes(router, routerOptions.ToolStore, routerOptions.AdminToken)
+	}
 	router.GET("/assets/*filepath", frontendAsset)
 	router.NoRoute(frontendFallback)
 
