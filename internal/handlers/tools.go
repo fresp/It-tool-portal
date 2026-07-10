@@ -22,6 +22,11 @@ type ToolStore interface {
 	Delete(ctx context.Context, id string) error
 }
 
+// AuditStore defines the interface for audit log persistence.
+type AuditStore interface {
+	Record(ctx context.Context, log models.AuditLog) error
+}
+
 type toolHandlers struct {
 	store ToolStore
 }
